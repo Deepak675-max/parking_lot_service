@@ -58,7 +58,6 @@ const loginUser = async (req, res, next) => {
         if (!isPasswordMatch)
             throw httpErros.NotFound('Incorrect password.');
 
-        console.log(doesUserExist);
 
         if (res.headersSent === false) {
             res.status(200).send({

@@ -9,16 +9,7 @@ const createExpense = async (req, res, next) => {
     try {
         const expenseDetails = await joiExpense.createExpenseSchema.validateAsync(req.body);
 
-        const user = await User.findOne({
-            where: {
-                id: expenseDetails.userId
-            }
-        })
-
-        if (!user)
-            throw httpErros.NotFound(`User with id: ${expenseDetails.userId} does not exist`);
-
-        await user.createExpense(expenseDetails);
+        await req.user.createExpense(expenseDetails);
 
         if (res.headersSent === false) {
             res.status(200).send({
@@ -30,7 +21,6 @@ const createExpense = async (req, res, next) => {
         }
 
     } catch (error) {
-        console.log(error);
         if (error?.isJoi === true) error.status = 422;
         next(error);
     }
@@ -40,21 +30,12 @@ const getExpense = async (req, res, next) => {
     try {
         const expenseSchema = await joiExpense.getExpenseSchema.validateAsync(req.body);
 
-        const user = await User.findOne({
-            where: {
-                id: expenseSchema.userId
-            }
-        })
-
-        if (!user)
-            throw httpErros.NotFound(`User with id: ${expenseSchema.userId} does not exist`);
-
         const query = { where: {} };
 
         if (expenseSchema.ExpenseId) {
             query.where.id = expenseSchema.ExpenseId
         }
-        const expenses = await user.getExpenses(query);
+        const expenses = await req.user.getExpenses(query);
 
         await Promise.all(
             expenses.map(expense => {
@@ -74,7 +55,6 @@ const getExpense = async (req, res, next) => {
         }
 
     } catch (error) {
-        console.log(error);
         if (error?.isJoi === true) error.status = 422;
         next(error);
     }
@@ -84,16 +64,7 @@ const updateExpense = async (req, res, next) => {
     try {
         const expenseDetails = await joiExpense.updateExpenseSchema.validateAsync(req.body);
 
-        const user = await User.findOne({
-            where: {
-                id: expenseDetails.userId
-            }
-        })
-
-        if (!user)
-            throw httpErros.NotFound(`User with id: ${expenseDetails.userId} does not exist`);
-
-        const expense = await user.getExpenses({
+        const expense = await req.user.getExpenses({
             where: {
                 id: expenseDetails.expenseId,
             }
@@ -104,7 +75,7 @@ const updateExpense = async (req, res, next) => {
             throw httpErros.NotFound(`Expense with id: ${expenseDetails.expenseId} not exist.`);
         }
 
-        await user.updateExpense(
+        await Expense.update(
             {
                 id: expenseDetails.expenseId,
                 amount: expenseDetails.amount,
@@ -137,27 +108,17 @@ const deleteExpense = async (req, res, next) => {
     try {
         const expenseDetails = await joiExpense.deleteExpenseSchema.validateAsync(req.body);
 
-        const user = await User.findOne({
-            where: {
-                id: expenseDetails.userId
-            }
-        })
-
-        if (!user)
-            throw httpErros.NotFound(`User with id: ${expenseDetails.userId} does not exist`);
-
-        const expense = await user.getExpenses({
+        const expense = await req.user.getExpenses({
             where: {
                 id: expenseDetails.expenseId,
             }
         })
 
         if (!expense) {
-
             throw httpErros.NotFound(`Expense with id: ${expenseDetails.expenseId} not exist.`);
         }
 
-        await user.deleteExpense(
+        await Expense.destroy(
             {
                 where: {
                     id: expenseDetails.expenseId
@@ -175,7 +136,6 @@ const deleteExpense = async (req, res, next) => {
         }
 
     } catch (error) {
-        console.log(error);
         if (error?.isJoi === true) error.status = 422;
         next(error);
     }
