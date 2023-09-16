@@ -1,5 +1,6 @@
 const User = require('../models/user.model');
 const httpErros = require('http-errors');
+const bcrypt = require('bcrypt');
 
 const joiUser = require('../helper/joi/auth.joi_validation')
 
@@ -15,6 +16,8 @@ const signupUser = async (req, res, next) => {
 
         if (doesUserExist)
             throw httpErros.Conflict(`User with email: ${userDetails.email} already exist`);
+
+        userDetails.password = await bcrypt.hash(userDetails.password, 10);
 
         const newUser = new User(userDetails);
 
@@ -44,12 +47,16 @@ const loginUser = async (req, res, next) => {
         const doesUserExist = await User.findOne({
             where: {
                 email: userDetails.email,
-                password: userDetails.password
             }
         })
 
         if (!doesUserExist)
-            throw httpErros.NotFound(`User with email: ${userDetails.email} and password: ${userDetails.password} does not exist`);
+            throw httpErros.NotFound(`User with email: ${userDetails.email} does not exist`);
+
+        const isPasswordMatch = await bcrypt.compare(userDetails.password, doesUserExist.password);
+
+        if (!isPasswordMatch)
+            throw httpErros.NotFound('Incorrect password.');
 
         console.log(doesUserExist);
 
