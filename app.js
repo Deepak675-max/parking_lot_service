@@ -6,6 +6,11 @@ const httpErrors = require("http-errors");
 const cors = require("cors");
 
 const expesneRoutes = require("./routes/expense.route");
+const authRoutes = require("./routes/user.route");
+const User = require('./models/user.model');
+const Expense = require('./models/expense.model');
+
+const sequelize = require('./helper/common/init_mysql');
 
 const expenseTrackerBackendApp = express();
 
@@ -13,8 +18,9 @@ expenseTrackerBackendApp.use(express.json());
 
 expenseTrackerBackendApp.use(cors());
 
+expenseTrackerBackendApp.use("/api/expense", expesneRoutes);
+expenseTrackerBackendApp.use("/api/auth", authRoutes);
 
-expenseTrackerBackendApp.use("/api", expesneRoutes);
 
 expenseTrackerBackendApp.use(async (req, _res, next) => {
     console.log(req, _res);
@@ -39,9 +45,20 @@ expenseTrackerBackendApp.use((error, req, res, next) => {
 });
 
 
+User.hasMany(Expense);
+
 const port = 3000;
 
-expenseTrackerBackendApp.listen(port, () => {
-    console.log(`server is listening on the port of ${port}`);
-})
+sequelize.sync({ alter: true })
+    .then(() => {
+        expenseTrackerBackendApp.listen(port, () => {
+            console.log(`server is listening on the port of ${port}`);
+        })
+    })
+    .catch(error => {
+        console.log(error);
+        process.exit(0);
+    })
+
+
 

@@ -2,16 +2,17 @@ const sequelize = require("../helper/common/init_mysql")
 
 const DataTypes = require("sequelize");
 
-const Expense = sequelize.define('Expense', {
+const User = sequelize.define('User', {
     // Model attributes are defined here
-    amount: {
+    userName: {
         type: DataTypes.STRING,
         allowNull: false
     },
-    description: {
+    email: {
         type: DataTypes.STRING,
+        allowNull: false
     },
-    category: {
+    password: {
         type: DataTypes.STRING,
         allowNull: false
     },
@@ -19,4 +20,8 @@ const Expense = sequelize.define('Expense', {
     timestamps: true
 });
 
-module.exports = Expense;
+User.sync().catch(error => {
+    console.log(error);
+})
+
+module.exports = User;
