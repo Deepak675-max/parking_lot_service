@@ -11,7 +11,6 @@ const User = require('./models/user.model');
 const Expense = require('./models/expense.model');
 
 const sequelize = require('./helper/common/init_mysql');
-const verifyUser = require('./middlewares/auth.middlewares');
 
 const expenseTrackerBackendApp = express();
 
@@ -19,7 +18,7 @@ expenseTrackerBackendApp.use(express.json());
 
 expenseTrackerBackendApp.use(cors());
 
-expenseTrackerBackendApp.use("/api/expense", verifyUser, expesneRoutes);
+expenseTrackerBackendApp.use("/api/expense", expesneRoutes);
 expenseTrackerBackendApp.use("/api/auth", authRoutes);
 
 

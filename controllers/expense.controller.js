@@ -1,7 +1,5 @@
 const Expense = require('../models/expense.model');
-const User = require('../models/user.model');
-
-const httpErros = require('http-errors');
+const httpErrors = require('http-errors');
 
 const joiExpense = require("../helper/joi/expense.joi_validation");
 
@@ -43,7 +41,6 @@ const getExpense = async (req, res, next) => {
                 delete expense.updatedAt;
             })
         )
-
         if (res.headersSent === false) {
             res.status(200).send({
                 error: false,
@@ -71,8 +68,7 @@ const updateExpense = async (req, res, next) => {
         })
 
         if (!expense) {
-
-            throw httpErros.NotFound(`Expense with id: ${expenseDetails.expenseId} not exist.`);
+            throw httpErrors.NotFound(`Expense with id: ${expenseDetails.expenseId} not exist.`);
         }
 
         await Expense.update(
@@ -115,7 +111,7 @@ const deleteExpense = async (req, res, next) => {
         })
 
         if (!expense) {
-            throw httpErros.NotFound(`Expense with id: ${expenseDetails.expenseId} not exist.`);
+            throw httpErrors.NotFound(`Expense with id: ${expenseDetails.expenseId} not exist.`);
         }
 
         await Expense.destroy(

@@ -1,6 +1,10 @@
+require('dotenv').config();
 const User = require('../models/user.model');
-const httpErros = require('http-errors');
+const httpErrors = require('http-errors');
 const bcrypt = require('bcrypt');
+const JWT = require('jsonwebtoken');
+
+const jwtModule = require('../middlewares/auth.middlewares')
 
 const joiUser = require('../helper/joi/auth.joi_validation')
 
@@ -15,7 +19,7 @@ const signupUser = async (req, res, next) => {
         })
 
         if (doesUserExist)
-            throw httpErros.Conflict(`User with email: ${userDetails.email} already exist`);
+            throw httpErrors.Conflict(`User with email: ${userDetails.email} already exist`);
 
         userDetails.password = await bcrypt.hash(userDetails.password, 10);
 
@@ -49,21 +53,29 @@ const loginUser = async (req, res, next) => {
                 email: userDetails.email,
             }
         })
-
         if (!doesUserExist)
-            throw httpErros.NotFound(`User with email: ${userDetails.email} does not exist`);
+            throw httpErrors.NotFound('invalid credentials');
 
         const isPasswordMatch = await bcrypt.compare(userDetails.password, doesUserExist.password);
 
         if (!isPasswordMatch)
-            throw httpErros.NotFound('Incorrect password.');
+            throw httpErrors.NotFound('invalid credentials.');
 
+        const jwtAccessToken = await jwtModule.signAccessToken({
+            userId: doesUserExist.id,
+            email: doesUserExist.email
+        });
 
         if (res.headersSent === false) {
             res.status(200).send({
                 error: false,
                 data: {
-                    user: doesUserExist,
+                    user: {
+                        userId: doesUserExist.id,
+                        userName: doesUserExist.userName,
+                        email: doesUserExist.email
+                    },
+                    token: jwtAccessToken,
                     message: "User login successfully",
                 },
             });
@@ -76,7 +88,62 @@ const loginUser = async (req, res, next) => {
     }
 }
 
+const getUserFromToken = async (req, res, next) => {
+    try {
+        const userDetails = {
+            userName: req.user.userName,
+            email: req.user.email
+        };
+        if (res.headersSent === false) {
+            res.status(200).send({
+                error: false,
+                data: {
+                    user: userDetails,
+                    message: "User fetched successfully",
+                },
+            });
+        }
+    } catch (error) {
+        console.log(error);
+        if (error?.isJoi === true) error.status = 422;
+        next(error);
+    }
+}
+
+const logoutUser = async (req, res, next) => {
+    try {
+        // Check if Payload contains appAgentId
+        if (!req.user.id) {
+            throw httpErrors.UnprocessableEntity(
+                `JWT Refresh Token error : Missing Payload Data`
+            );
+        }
+        // Delete Refresh Token from Redis DB
+        await jwtModule
+            .removeToken({
+                userId: req.user.id,
+            })
+            .catch((error) => {
+                throw httpErrors.InternalServerError(
+                    `JWT Access Token error : ${error.message}`
+                );
+            });
+
+        res.status(200).send({
+            error: false,
+            data: {
+                message: "Agent logged out successfully.",
+            },
+        });
+    } catch (error) {
+        console.log(error.message);
+        next(error);
+    }
+}
+
 module.exports = {
     loginUser,
-    signupUser
+    signupUser,
+    getUserFromToken,
+    logoutUser
 }
