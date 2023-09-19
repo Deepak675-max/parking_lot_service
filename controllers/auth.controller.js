@@ -92,7 +92,8 @@ const getUserFromToken = async (req, res, next) => {
     try {
         const userDetails = {
             userName: req.user.userName,
-            email: req.user.email
+            email: req.user.email,
+            isPremiumUser: req.user.isPremiumUser
         };
         if (res.headersSent === false) {
             res.status(200).send({
