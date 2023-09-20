@@ -14,4 +14,6 @@ expenseRouter.put("/update-expense", verifyAccessToken.verifyAccessToken, expens
 
 expenseRouter.put("/delete-expense", verifyAccessToken.verifyAccessToken, expenseController.deleteExpense);
 
+expenseRouter.get("/get-leaderboard", expenseController.getLeaderboard);
+
 module.exports = expenseRouter;

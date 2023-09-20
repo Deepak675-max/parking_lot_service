@@ -16,7 +16,7 @@ const purchasePremiumMembership = async (req, res, next) => {
             key_id: process.env.RAZORPAY_KEY_ID,
             key_secret: process.env.RAZORPAY_SECRET_KEY
         })
-        const amount = 500;
+        const amount = 50000;
 
         const order = await rzp.orders.create({ amount, currency: "INR" });
 

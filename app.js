@@ -1,6 +1,5 @@
 require('dotenv').config();
 const express = require('express');
-
 const httpErrors = require("http-errors");
 
 const cors = require("cors");
@@ -8,7 +7,7 @@ const cors = require("cors");
 const expesneRoutes = require("./routes/expense.route");
 const authRoutes = require("./routes/user.route");
 const orderRoutes = require("./routes/order.route");
-
+const premiumRoutes = require("./routes/premium.route");
 
 const User = require('./models/user.model');
 const Expense = require('./models/expense.model');
@@ -25,7 +24,7 @@ expenseTrackerBackendApp.use(cors());
 expenseTrackerBackendApp.use("/api/expense", expesneRoutes);
 expenseTrackerBackendApp.use("/api/auth", authRoutes);
 expenseTrackerBackendApp.use("/api/order", orderRoutes);
-
+expenseTrackerBackendApp.use("/api/premium", premiumRoutes);
 
 
 expenseTrackerBackendApp.use(async (req, _res, next) => {
@@ -51,10 +50,10 @@ expenseTrackerBackendApp.use((error, req, res, next) => {
 });
 
 //models associtaions.
-User.hasMany(Expense);
-Expense.belongsTo(User);
-User.hasMany(Order);
-Order.belongsTo(User);
+User.hasMany(Expense, { foreignKey: 'userId' });
+Expense.belongsTo(User, { foreignKey: 'userId' });
+User.hasMany(Order, { foreignKey: 'userId' });
+Order.belongsTo(User, { foreignKey: 'userId' });
 
 const port = 3000;
 

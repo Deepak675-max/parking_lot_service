@@ -1,5 +1,8 @@
 const Expense = require('../models/expense.model');
+const User = require('../models/user.model');
 const httpErrors = require('http-errors');
+
+const Sequelize = require('sequelize');
 
 const joiExpense = require("../helper/joi/expense.joi_validation");
 
@@ -137,10 +140,46 @@ const deleteExpense = async (req, res, next) => {
     }
 }
 
+const getLeaderboard = async (req, res, next) => {
+    try {
+        const leaderboard = await Expense.findAll({
+            attributes: [
+                [Sequelize.col('User.userName'), 'userName'],
+                [Sequelize.fn('SUM', Sequelize.col('amount')), 'totalAmount'],
+            ],
+            include: [
+                {
+                    model: User,
+                    attributes: [],
+                },
+            ],
+            group: ['User.userName'],
+            order: [[Sequelize.literal('totalAmount DESC')]],
+        })
+
+
+        if (res.headersSent === false) {
+            res.status(200).send({
+                error: false,
+                data: {
+                    leaderboardData: leaderboard,
+                    message: "Leaderboard fetched successfully",
+                },
+            });
+        }
+
+
+    } catch (error) {
+        console.log(error);
+        next(error);
+    }
+}
+
 
 module.exports = {
     createExpense,
     getExpense,
     updateExpense,
-    deleteExpense
+    deleteExpense,
+    getLeaderboard
 }
