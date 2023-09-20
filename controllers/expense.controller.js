@@ -1,16 +1,23 @@
 const Expense = require('../models/expense.model');
 const User = require('../models/user.model');
 const httpErrors = require('http-errors');
-
-const Sequelize = require('sequelize');
+const sequelize = require('../helper/common/init_mysql');
 
 const joiExpense = require("../helper/joi/expense.joi_validation");
 
+
 const createExpense = async (req, res, next) => {
+    const transaction = await sequelize.transaction();
     try {
         const expenseDetails = await joiExpense.createExpenseSchema.validateAsync(req.body);
 
-        await req.user.createExpense(expenseDetails);
+        await req.user.createExpense(expenseDetails, { transaction });
+
+        const totalExpense = req.user.totalExpense + expenseDetails.amount;
+
+        await req.user.update({ totalExpense: totalExpense }, { transaction });
+
+        await transaction.commit();
 
         if (res.headersSent === false) {
             res.status(200).send({
@@ -22,6 +29,7 @@ const createExpense = async (req, res, next) => {
         }
 
     } catch (error) {
+        await transaction.rollback();
         if (error?.isJoi === true) error.status = 422;
         next(error);
     }
@@ -61,6 +69,8 @@ const getExpense = async (req, res, next) => {
 }
 
 const updateExpense = async (req, res, next) => {
+    const transaction = await sequelize.transaction();
+
     try {
         const expenseDetails = await joiExpense.updateExpenseSchema.validateAsync(req.body);
 
@@ -70,7 +80,7 @@ const updateExpense = async (req, res, next) => {
             }
         })
 
-        if (!expense) {
+        if (expense?.length <= 0) {
             throw httpErrors.NotFound(`Expense with id: ${expenseDetails.expenseId} not exist.`);
         }
 
@@ -84,9 +94,16 @@ const updateExpense = async (req, res, next) => {
             {
                 where: {
                     id: expenseDetails.expenseId
-                }
-            }
+                },
+                transaction
+            },
         )
+
+        const totalExpense = req.user.totalExpense - expense[0].amount + expenseDetails.amount;
+
+        await req.user.update({ totalExpense: totalExpense }, { transaction });
+
+        await transaction.commit();
 
         if (res.headersSent === false) {
             res.status(200).send({
@@ -97,6 +114,7 @@ const updateExpense = async (req, res, next) => {
             });
         }
     } catch (error) {
+        await transaction.rollback();
         console.log(error.message);
         if (error?.isJoi === true) error.status = 422;
         next(error);
@@ -104,6 +122,8 @@ const updateExpense = async (req, res, next) => {
 }
 
 const deleteExpense = async (req, res, next) => {
+    const transaction = await sequelize.transaction();
+
     try {
         const expenseDetails = await joiExpense.deleteExpenseSchema.validateAsync(req.body);
 
@@ -113,7 +133,7 @@ const deleteExpense = async (req, res, next) => {
             }
         })
 
-        if (!expense) {
+        if (expense?.length <= 0) {
             throw httpErrors.NotFound(`Expense with id: ${expenseDetails.expenseId} not exist.`);
         }
 
@@ -121,9 +141,17 @@ const deleteExpense = async (req, res, next) => {
             {
                 where: {
                     id: expenseDetails.expenseId
-                }
+                },
+                transaction
             }
         )
+
+        const totalExpense = req.user.totalExpense - expense[0].amount;
+
+        await req.user.update({ totalExpense: totalExpense }, { transaction });
+
+        await transaction.commit();
+
 
         if (res.headersSent === false) {
             res.status(200).send({
@@ -135,6 +163,7 @@ const deleteExpense = async (req, res, next) => {
         }
 
     } catch (error) {
+        await transaction.rollback();
         if (error?.isJoi === true) error.status = 422;
         next(error);
     }
@@ -142,27 +171,28 @@ const deleteExpense = async (req, res, next) => {
 
 const getLeaderboard = async (req, res, next) => {
     try {
-        const leaderboard = await Expense.findAll({
-            attributes: [
-                [Sequelize.col('User.userName'), 'userName'],
-                [Sequelize.fn('SUM', Sequelize.col('amount')), 'totalAmount'],
-            ],
-            include: [
-                {
-                    model: User,
-                    attributes: [],
-                },
-            ],
-            group: ['User.userName'],
-            order: [[Sequelize.literal('totalAmount DESC')]],
-        })
+        const leaderboard = await User.findAll({
+            order: [['totalExpense', 'DESC']],
+        });
 
+        const leaderboardData = await Promise.all(
+            leaderboard.map(user => {
+                const userObject = user.toJSON();
+                delete userObject.id;
+                delete userObject.password;
+                delete userObject.email;
+                delete userObject.createdAt;
+                delete userObject.updatedAt;
+                delete userObject.isPremiumUser;
+                return userObject;
+            })
+        )
 
         if (res.headersSent === false) {
             res.status(200).send({
                 error: false,
                 data: {
-                    leaderboardData: leaderboard,
+                    leaderboardData: leaderboardData,
                     message: "Leaderboard fetched successfully",
                 },
             });

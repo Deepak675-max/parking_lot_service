@@ -1,7 +1,7 @@
 const joi = require('joi');
 
 const createExpenseSchema = joi.object({
-    amount: joi.string().trim().required(),
+    amount: joi.number().required(),
     description: joi.string().trim().required(),
     category: joi.string().trim().valid('Food', 'Electricity', 'Movie', 'Fuel').required()
 })
@@ -13,7 +13,7 @@ const getExpenseSchema = joi.object({
 
 const updateExpenseSchema = joi.object({
     expenseId: joi.number().required(),
-    amount: joi.string().trim().required(),
+    amount: joi.number().required(),
     description: joi.string().trim().required(),
     category: joi.string().trim().valid('Food', 'Electricity', 'Movie', 'Fuel').required()
 })
