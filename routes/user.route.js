@@ -14,5 +14,10 @@ authRouter.get('/get-user', verifyAccessToken.verifyAccessToken, authController.
 
 authRouter.get('/logout', verifyAccessToken.verifyAccessToken, authController.logoutUser);
 
+authRouter.post('/forgot-password', authController.forgotPassword);
+authRouter.get('/reset-password/:id', authController.sendResetPasswordForm);
+authRouter.post('/update-password/:resetToken', authController.updatePassword);
+
+
 
 module.exports = authRouter;

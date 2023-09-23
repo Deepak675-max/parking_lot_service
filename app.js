@@ -12,12 +12,16 @@ const premiumRoutes = require("./routes/premium.route");
 const User = require('./models/user.model');
 const Expense = require('./models/expense.model');
 const Order = require('./models/order.model');
+const ForgotPasswordRequests = require('./models/forgetPasswordRequests.model');
+
 
 const sequelize = require('./helper/common/init_mysql');
 
 const expenseTrackerBackendApp = express();
 
 expenseTrackerBackendApp.use(express.json());
+expenseTrackerBackendApp.use(express.urlencoded({ extended: true }));
+
 
 expenseTrackerBackendApp.use(cors());
 
@@ -54,6 +58,8 @@ User.hasMany(Expense, { foreignKey: 'userId' });
 Expense.belongsTo(User, { foreignKey: 'userId' });
 User.hasMany(Order, { foreignKey: 'userId' });
 Order.belongsTo(User, { foreignKey: 'userId' });
+User.hasMany(ForgotPasswordRequests, { foreignKey: 'userId' });
+ForgotPasswordRequests.belongsTo(User, { foreignKey: 'userId' });
 
 const port = 3000;
 
@@ -67,6 +73,15 @@ sequelize.sync({ alter: true })
         console.log(error);
         process.exit(0);
     })
+
+process.on('SIGINT', () => {
+    // Perform cleanup operations here
+    console.log('Received SIGINT signal. application terminated successfully.');
+
+    // Exit the application
+    process.exit(0);
+});
+
 
 
 
