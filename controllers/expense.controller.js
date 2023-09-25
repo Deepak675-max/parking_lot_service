@@ -2,7 +2,7 @@ const Expense = require('../models/expense.model');
 const User = require('../models/user.model');
 const httpErrors = require('http-errors');
 const sequelize = require('../helper/common/init_mysql');
-
+const { Op } = require('sequelize');
 const joiExpense = require("../helper/joi/expense.joi_validation");
 
 
@@ -10,6 +10,8 @@ const createExpense = async (req, res, next) => {
     const transaction = await sequelize.transaction();
     try {
         const expenseDetails = await joiExpense.createExpenseSchema.validateAsync(req.body);
+
+        console.log(expenseDetails);
 
         await req.user.createExpense(expenseDetails, { transaction });
 
@@ -30,41 +32,95 @@ const createExpense = async (req, res, next) => {
 
     } catch (error) {
         await transaction.rollback();
+        console.log(error);
         if (error?.isJoi === true) error.status = 422;
         next(error);
     }
 }
 
+// const getExpense = async (req, res, next) => {
+//     try {
+//         const expenseSchema = await joiExpense.getExpenseSchema.validateAsync(req.body);
+
+//         const query = { where: {} };
+
+//         if (expenseSchema.ExpenseId) {
+//             query.where.id = expenseSchema.ExpenseId
+//         }
+
+//         query.order = [['id', 'DESC']];
+
+//         const expenses = await req.user.getExpenses(query);
+
+//         await Promise.all(
+//             expenses.map(expense => {
+//                 delete expense.createdAt;
+//                 delete expense.updatedAt;
+//             })
+//         )
+//         if (res.headersSent === false) {
+//             res.status(200).send({
+//                 error: false,
+//                 data: {
+//                     expenses: expenses,
+//                     message: "Expense fetched successfully",
+//                 },
+//             });
+//         }
+
+//     } catch (error) {
+//         if (error?.isJoi === true) error.status = 422;
+//         next(error);
+//     }
+// }
+
 const getExpense = async (req, res, next) => {
     try {
-        const expenseSchema = await joiExpense.getExpenseSchema.validateAsync(req.body);
+        const { draw, start, length, columns, order, search } = req.body;
 
-        const query = { where: {} };
+        // Define Sequelize options for pagination, sorting, and searching
+        const query = {
+            offset: parseInt(start),
+            limit: parseInt(length),
+            order: [], // You'll build this dynamically
+            where: {},
+        };
 
-        if (expenseSchema.ExpenseId) {
-            query.where.id = expenseSchema.ExpenseId
+        // Build sorting options based on DataTables order parameter
+        if (order && order.length) {
+            const orderColumnIndex = order[0].column;
+            const orderDirection = order[0].dir;
+            const orderColumnName = columns[orderColumnIndex].data;
+
+            query.order.push([orderColumnName, orderDirection]);
         }
-        const expenses = await req.user.getExpenses(query);
 
-        await Promise.all(
-            expenses.map(expense => {
-                delete expense.createdAt;
-                delete expense.updatedAt;
-            })
-        )
+        // Build search condition if search value is provided
+        if (search && search.value) {
+            query.where = {
+                [Op.or]: [
+                    { description: { [Op.like]: `%${search.value}%` } },
+                    { category: { [Op.like]: `%${search.value}%` } },
+                ],
+            };
+        }
+
+        query.where.userId = req.user.id;
+
+        // Fetch data using Sequelize based on options
+        const { count, rows: expenses } = await Expense.findAndCountAll(query);
+
         if (res.headersSent === false) {
-            res.status(200).send({
-                error: false,
-                data: {
-                    expenses: expenses,
-                    message: "Expense fetched successfully",
-                },
+            res.json({
+                draw: draw,
+                recordsTotal: count, // Total records in the dataset
+                recordsFiltered: count, // Total records after filtering (if applicable)
+                data: expenses,
             });
         }
-
     } catch (error) {
-        if (error?.isJoi === true) error.status = 422;
-        next(error);
+        console.error(error.message);
+        res.status(500).json({ error: true, message: 'Internal Server Error' });
     }
 }
 

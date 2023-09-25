@@ -61,7 +61,7 @@ Order.belongsTo(User, { foreignKey: 'userId' });
 User.hasMany(ForgotPasswordRequests, { foreignKey: 'userId' });
 ForgotPasswordRequests.belongsTo(User, { foreignKey: 'userId' });
 
-const port = 3000;
+const port = process.env.APP_PORT;
 
 sequelize.sync({ alter: true })
     .then(() => {

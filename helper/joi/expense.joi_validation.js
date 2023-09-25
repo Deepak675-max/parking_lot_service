@@ -7,7 +7,12 @@ const createExpenseSchema = joi.object({
 })
 
 const getExpenseSchema = joi.object({
-    expenseId: joi.number().allow(null).default(null)
+    expenseId: joi.number().allow(null).default(null),
+    start: joi.number().required(),
+    length: joi.number().required(),
+    column: joi.number().required(),
+    order: joi.array().items(),
+    draw: joi.boolean().required()
 })
 
 

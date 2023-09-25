@@ -200,7 +200,6 @@ const sendResetPasswordForm = async (req, res, next) => {
         fileData = fileData.replace('{{resetToken}}', id)
         res.send(fileData);
     } catch (error) {
-        console.log(error.message);
         next(error);
     }
 }
@@ -209,13 +208,10 @@ const updatePassword = async (req, res, next) => {
     try {
         const password = req.body.password;
         const conformPassword = req.body.confirmPassword;
-        console.log(password, ", ", conformPassword);
         if (password != conformPassword) {
             res.send('confirm password doed not match.')
         }
-        console.log(password);
         const resetToken = req.params.resetToken;
-        console.log(resetToken);
         const requestDetails = await ForgotPasswordRequests.findOne({
             where: {
                 id: resetToken
@@ -233,7 +229,6 @@ const updatePassword = async (req, res, next) => {
         }
         res.send('Password updated successfully.')
     } catch (error) {
-        console.log(error.message);
         next(error);
     }
 }
