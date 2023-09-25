@@ -38,41 +38,41 @@ const createExpense = async (req, res, next) => {
     }
 }
 
-// const getExpense = async (req, res, next) => {
-//     try {
-//         const expenseSchema = await joiExpense.getExpenseSchema.validateAsync(req.body);
+const getUserExpense = async (req, res, next) => {
+    try {
+        const expenseSchema = await joiExpense.getExpenseSchema.validateAsync(req.body);
 
-//         const query = { where: {} };
+        const query = { where: {} };
 
-//         if (expenseSchema.ExpenseId) {
-//             query.where.id = expenseSchema.ExpenseId
-//         }
+        if (expenseSchema.ExpenseId) {
+            query.where.id = expenseSchema.ExpenseId
+        }
 
-//         query.order = [['id', 'DESC']];
+        query.order = [['id', 'DESC']];
 
-//         const expenses = await req.user.getExpenses(query);
+        const expenses = await req.user.getExpenses(query);
 
-//         await Promise.all(
-//             expenses.map(expense => {
-//                 delete expense.createdAt;
-//                 delete expense.updatedAt;
-//             })
-//         )
-//         if (res.headersSent === false) {
-//             res.status(200).send({
-//                 error: false,
-//                 data: {
-//                     expenses: expenses,
-//                     message: "Expense fetched successfully",
-//                 },
-//             });
-//         }
+        await Promise.all(
+            expenses.map(expense => {
+                delete expense.createdAt;
+                delete expense.updatedAt;
+            })
+        )
+        if (res.headersSent === false) {
+            res.status(200).send({
+                error: false,
+                data: {
+                    expenses: expenses,
+                    message: "Expense fetched successfully",
+                },
+            });
+        }
 
-//     } catch (error) {
-//         if (error?.isJoi === true) error.status = 422;
-//         next(error);
-//     }
-// }
+    } catch (error) {
+        if (error?.isJoi === true) error.status = 422;
+        next(error);
+    }
+}
 
 const getExpense = async (req, res, next) => {
     try {
@@ -267,5 +267,6 @@ module.exports = {
     getExpense,
     updateExpense,
     deleteExpense,
-    getLeaderboard
+    getLeaderboard,
+    getUserExpense
 }

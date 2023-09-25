@@ -8,7 +8,7 @@ const expenseController = require("../controllers/expense.controller");
 
 expenseRouter.post("/create-expense", verifyAccessToken.verifyAccessToken, expenseController.createExpense);
 
-expenseRouter.post("/get-expense", verifyAccessToken.verifyAccessToken, expenseController.getExpense);
+expenseRouter.post("/get-expense", verifyAccessToken.verifyAccessToken, expenseController.getUserExpense);
 
 expenseRouter.put("/update-expense", verifyAccessToken.verifyAccessToken, expenseController.updateExpense);
 
