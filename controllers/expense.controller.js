@@ -120,7 +120,7 @@ const getExpense = async (req, res, next) => {
         }
     } catch (error) {
         console.error(error.message);
-        res.status(500).json({ error: true, message: 'Internal Server Error' });
+        next(error);
     }
 }
 
