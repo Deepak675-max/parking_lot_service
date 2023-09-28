@@ -1,5 +1,5 @@
 const axoisInstance = axios.create({
-    baseURL: 'http://localhost:3000/api/auth'
+    baseURL: 'http://52.66.114.142:3000/api/auth'
 })
 
 async function sendResetPassword(userData) {

@@ -88,7 +88,6 @@ const loginUser = async (req, res, next) => {
         }
 
     } catch (error) {
-        console.log(error);
         if (error?.isJoi === true) error.status = 422;
         next(error);
     }
@@ -111,7 +110,6 @@ const getUserFromToken = async (req, res, next) => {
             });
         }
     } catch (error) {
-        console.log(error);
         if (error?.isJoi === true) error.status = 422;
         next(error);
     }
@@ -143,7 +141,6 @@ const logoutUser = async (req, res, next) => {
             },
         });
     } catch (error) {
-        console.log(error.message);
         next(error);
     }
 }
@@ -177,7 +174,6 @@ const forgotPassword = async (req, res, next) => {
             },
         });
     } catch (error) {
-        console.log(error.message);
         next(error);
     }
 }

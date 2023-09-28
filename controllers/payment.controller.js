@@ -38,7 +38,6 @@ const purchasePremiumMembership = async (req, res, next) => {
 
 
     } catch (error) {
-        console.log(error);
         next(error);
     }
 }
@@ -70,7 +69,6 @@ const updateTransactionStatus = async (req, res, next) => {
         }
 
     } catch (error) {
-        console.log(error);
         next(error);
     }
 }

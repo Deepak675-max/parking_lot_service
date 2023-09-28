@@ -11,8 +11,6 @@ const createExpense = async (req, res, next) => {
     try {
         const expenseDetails = await joiExpense.createExpenseSchema.validateAsync(req.body);
 
-        console.log(expenseDetails);
-
         await req.user.createExpense(expenseDetails, { transaction });
 
         const totalExpense = req.user.totalExpense + expenseDetails.amount;
@@ -32,7 +30,6 @@ const createExpense = async (req, res, next) => {
 
     } catch (error) {
         await transaction.rollback();
-        console.log(error);
         if (error?.isJoi === true) error.status = 422;
         next(error);
     }
@@ -119,7 +116,6 @@ const getExpense = async (req, res, next) => {
             });
         }
     } catch (error) {
-        console.error(error.message);
         next(error);
     }
 }
@@ -171,7 +167,6 @@ const updateExpense = async (req, res, next) => {
         }
     } catch (error) {
         await transaction.rollback();
-        console.log(error.message);
         if (error?.isJoi === true) error.status = 422;
         next(error);
     }
@@ -256,7 +251,6 @@ const getLeaderboard = async (req, res, next) => {
 
 
     } catch (error) {
-        console.log(error);
         next(error);
     }
 }
