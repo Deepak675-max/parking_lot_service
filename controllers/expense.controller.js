@@ -77,11 +77,14 @@ const getExpense = async (req, res, next) => {
 
         // Define Sequelize options for pagination, sorting, and searching
         const query = {
-            offset: parseInt(start),
-            limit: parseInt(length),
             order: [], // You'll build this dynamically
             where: {},
         };
+
+        if (length != -1) {
+            query.offset = parseInt(start);
+            query.limit = parseInt(length);
+        }
 
         // Build sorting options based on DataTables order parameter
         if (order && order.length) {

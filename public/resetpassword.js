@@ -2,7 +2,7 @@ const axoisInstance = axios.create({
     baseURL: 'http://52.66.114.142:3000/api/auth'
 })
 
-async function sendResetPassword(userData) {
+async function sendResetPasswordLink(userData) {
     try {
         const responseData = await axoisInstance.post('/update-password', userData);
         if (responseData.data.error) {

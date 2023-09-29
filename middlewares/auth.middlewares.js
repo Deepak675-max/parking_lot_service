@@ -58,7 +58,6 @@ const verifyAccessToken = async (req, res, next) => {
         next();
 
     } catch (error) {
-        console.log(error);
         next(httpErrors.Unauthorized(notAuthorized));
     }
 }
