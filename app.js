@@ -13,12 +13,13 @@ const User = require('./models/user.model');
 const Expense = require('./models/expense.model');
 const Order = require('./models/order.model');
 const ForgotPasswordRequests = require('./models/forgetPasswordRequests.model');
+const expenseTrackerBackendApp = express();
+
 
 expenseTrackerBackendApp.use(cors());
 
 const sequelize = require('./helper/common/init_mysql');
 
-const expenseTrackerBackendApp = express();
 
 expenseTrackerBackendApp.use(express.json());
 expenseTrackerBackendApp.use(express.urlencoded({ extended: true }));
