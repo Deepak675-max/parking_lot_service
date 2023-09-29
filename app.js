@@ -14,6 +14,7 @@ const Expense = require('./models/expense.model');
 const Order = require('./models/order.model');
 const ForgotPasswordRequests = require('./models/forgetPasswordRequests.model');
 
+expenseTrackerBackendApp.use(cors());
 
 const sequelize = require('./helper/common/init_mysql');
 
@@ -23,7 +24,6 @@ expenseTrackerBackendApp.use(express.json());
 expenseTrackerBackendApp.use(express.urlencoded({ extended: true }));
 
 
-expenseTrackerBackendApp.use(cors());
 
 expenseTrackerBackendApp.use("/api/expense", expesneRoutes);
 expenseTrackerBackendApp.use("/api/auth", authRoutes);
