@@ -19,9 +19,8 @@ const signupUser = async (req, res, next) => {
         const userDetails = await joiUser.signupUserSchema.validateAsync(req.body);
 
         const doesUserExist = await User.findOne({
-            where: {
-                email: userDetails.email
-            }
+            email: userDetails.email,
+            isDeleted: false
         })
 
         if (doesUserExist)
@@ -55,9 +54,8 @@ const loginUser = async (req, res, next) => {
         const userDetails = await joiUser.loginUserSchema.validateAsync(req.body);
 
         const doesUserExist = await User.findOne({
-            where: {
-                email: userDetails.email,
-            }
+            email: userDetails.email,
+            isDeleted: false
         })
         if (!doesUserExist)
             throw httpErrors.NotFound('invalid credentials');
@@ -78,7 +76,7 @@ const loginUser = async (req, res, next) => {
                 data: {
                     user: {
                         userId: doesUserExist.id,
-                        userName: doesUserExist.userName,
+                        name: doesUserExist.name,
                         email: doesUserExist.email
                     },
                     token: jwtAccessToken,
@@ -96,7 +94,7 @@ const loginUser = async (req, res, next) => {
 const getUserFromToken = async (req, res, next) => {
     try {
         const userDetails = {
-            userName: req.user.userName,
+            name: req.user.name,
             email: req.user.email,
             isPremiumUser: req.user.isPremiumUser
         };
@@ -137,7 +135,7 @@ const logoutUser = async (req, res, next) => {
         res.status(200).send({
             error: false,
             data: {
-                message: "Agent logged out successfully.",
+                message: "User logged out successfully.",
             },
         });
     } catch (error) {
@@ -148,19 +146,18 @@ const logoutUser = async (req, res, next) => {
 const forgotPassword = async (req, res, next) => {
     try {
         const user = await User.findOne({
-            where: {
-                email: req.body.email,
-            }
+            email: req.body.email,
+            isDeleted: false
         })
+        if (!user) throw httpErrors.NotFound('Invalid email.')
         const data = {
-            id: uuidv4(),
-            userId: user.id,
+            user: user._id,
             isActive: true,
         }
-        await ForgotPasswordRequests.create(data);
+        const request = await ForgotPasswordRequests.create(data);
         const emailConfig = {
             recipient: req.body.email,
-            recoveryToken: data.id
+            recoveryToken: request._id
         }
         const emailRes = await sendForgotPasswordEmail(emailConfig);
         if (!emailRes.messageId) {
@@ -183,14 +180,14 @@ const sendResetPasswordForm = async (req, res, next) => {
         const id = req.params.id;
 
         const forgotPasswordRequest = await ForgotPasswordRequests.findOne({
-            where: {
-                id: id,
-                isActive: true
-            }
+            _id: id,
+            isActive: true
         })
+
         if (!forgotPasswordRequest) {
             throw httpErrors.UnprocessableEntity('link is no longer active');
         }
+
         const filePath = path.join(__dirname, '../public/resetpassword.html')
         let fileData = fs.readFileSync(filePath, 'utf8');
         fileData = fileData.replace('{{resetToken}}', id)
@@ -209,20 +206,22 @@ const updatePassword = async (req, res, next) => {
         }
         const resetToken = req.params.resetToken;
         const requestDetails = await ForgotPasswordRequests.findOne({
-            where: {
-                id: resetToken
-            }
+            _id: resetToken,
+            isActive: true
         })
         const hashPassword = await bcrypt.hash(password, 10);
 
-        const result = await User.update({ password: hashPassword }, {
-            where: {
-                id: requestDetails.userId
+        const result = await User.updateOne({ _id: requestDetails.user, isDeleted: false }, {
+            $set: {
+                password: hashPassword
             }
-        })
+        });
+
         if (result == 0) {
             throw httpErrors.UnprocessableEntity('something went wrong while updating password');
         }
+        requestDetails.isActive = false;
+        await requestDetails.save();
         res.send('Password updated successfully.')
     } catch (error) {
         next(error);

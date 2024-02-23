@@ -7,7 +7,7 @@ const createExpenseSchema = joi.object({
 })
 
 const getExpenseSchema = joi.object({
-    expenseId: joi.number().allow(null).default(null),
+    expenseId: joi.string().hex().length(24).optional().default(null),
     start: joi.number().required(),
     length: joi.number().required(),
     column: joi.number().required(),
@@ -17,7 +17,7 @@ const getExpenseSchema = joi.object({
 
 
 const updateExpenseSchema = joi.object({
-    expenseId: joi.number().required(),
+    expenseId: joi.string().hex().length(24).required(),
     amount: joi.number().required(),
     description: joi.string().trim().required(),
     category: joi.string().trim().valid('Food', 'Electricity', 'Movie', 'Fuel').required()
@@ -25,7 +25,7 @@ const updateExpenseSchema = joi.object({
 
 
 const deleteExpenseSchema = joi.object({
-    expenseId: joi.number().required()
+    expenseId: joi.string().hex().length(24).required()
 })
 
 module.exports = {

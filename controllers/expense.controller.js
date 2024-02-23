@@ -1,23 +1,27 @@
 const Expense = require('../models/expense.model');
 const User = require('../models/user.model');
 const httpErrors = require('http-errors');
-const sequelize = require('../helper/common/init_mysql');
-const { Op } = require('sequelize');
 const joiExpense = require("../helper/joi/expense.joi_validation");
 
-
 const createExpense = async (req, res, next) => {
-    const transaction = await sequelize.transaction();
+    const session = await Expense.startSession();
+    session.startTransaction();
     try {
         const expenseDetails = await joiExpense.createExpenseSchema.validateAsync(req.body);
 
-        await req.user.createExpense(expenseDetails, { transaction });
+        expenseDetails.user = req.user._id;
 
-        const totalExpense = req.user.totalExpense + expenseDetails.amount;
+        const newExpense = new Expense(expenseDetails);
 
-        await req.user.update({ totalExpense: totalExpense }, { transaction });
+        await newExpense.save({ session });
 
-        await transaction.commit();
+        req.user.totalExpense = req.user.totalExpense + expenseDetails.amount;
+
+        await req.user.save({ session });
+
+        await session.commitTransaction();
+
+        session.endSession();
 
         if (res.headersSent === false) {
             res.status(200).send({
@@ -29,7 +33,9 @@ const createExpense = async (req, res, next) => {
         }
 
     } catch (error) {
-        await transaction.rollback();
+        await session.abortTransaction();
+        session.endSession();
+        console.log(error);
         if (error?.isJoi === true) error.status = 422;
         next(error);
     }
@@ -71,20 +77,69 @@ const getUserExpense = async (req, res, next) => {
     }
 }
 
+// const getExpense = async (req, res, next) => {
+//     try {
+//         const { draw, start, length, columns, order, search } = req.body;
+
+//         // Define Sequelize options for pagination, sorting, and searching
+//         const query = {
+//             order: [], // You'll build this dynamically
+//             where: {},
+//         };
+
+//         if (length != -1) {
+//             query.offset = parseInt(start);
+//             query.limit = parseInt(length);
+//         }
+
+//         // Build sorting options based on DataTables order parameter
+//         if (order && order.length) {
+//             const orderColumnIndex = order[0].column;
+//             const orderDirection = order[0].dir;
+//             const orderColumnName = columns[orderColumnIndex].data;
+
+//             query.order.push([orderColumnName, orderDirection]);
+//         }
+
+//         // Build search condition if search value is provided
+//         if (search && search.value) {
+//             query.where = {
+//                 [Op.or]: [
+//                     { description: { [Op.like]: `%${search.value}%` } },
+//                     { category: { [Op.like]: `%${search.value}%` } },
+//                 ],
+//             };
+//         }
+
+//         query.where.userId = req.user.id;
+
+//         // Fetch data using Sequelize based on options
+//         const { count, rows: expenses } = await Expense.findAndCountAll(query);
+
+//         if (res.headersSent === false) {
+//             res.json({
+//                 draw: draw,
+//                 recordsTotal: count, // Total records in the dataset
+//                 recordsFiltered: count, // Total records after filtering (if applicable)
+//                 data: expenses,
+//             });
+//         }
+//     } catch (error) {
+//         next(error);
+//     }
+// }
+
 const getExpense = async (req, res, next) => {
     try {
         const { draw, start, length, columns, order, search } = req.body;
 
-        // Define Sequelize options for pagination, sorting, and searching
+        // Define Mongoose options for pagination, sorting, and searching
         const query = {
-            order: [], // You'll build this dynamically
-            where: {},
+            skip: parseInt(start) || 0,
+            limit: parseInt(length) || 10,
+            sort: {},
+            where: { user: req.user._id, isDeleted: false }
         };
-
-        if (length != -1) {
-            query.offset = parseInt(start);
-            query.limit = parseInt(length);
-        }
 
         // Build sorting options based on DataTables order parameter
         if (order && order.length) {
@@ -92,73 +147,74 @@ const getExpense = async (req, res, next) => {
             const orderDirection = order[0].dir;
             const orderColumnName = columns[orderColumnIndex].data;
 
-            query.order.push([orderColumnName, orderDirection]);
+            query.sort[orderColumnName] = orderDirection === 'asc' ? 1 : -1;
         }
 
         // Build search condition if search value is provided
         if (search && search.value) {
-            query.where = {
-                [Op.or]: [
-                    { description: { [Op.like]: `%${search.value}%` } },
-                    { category: { [Op.like]: `%${search.value}%` } },
-                ],
-            };
+            const searchValue = new RegExp(search.value, 'i'); // Case-insensitive search
+            query.where.$or = [
+                { description: { $regex: searchValue } },
+                { category: { $regex: searchValue } }
+            ];
         }
 
-        query.where.userId = req.user.id;
+        // Fetch data using Mongoose based on options
+        const expenses = await Expense
+            .find(query.where)
+            .skip(query.skip)
+            .limit(query.limit)
+            .sort(query.sort);
 
-        // Fetch data using Sequelize based on options
-        const { count, rows: expenses } = await Expense.findAndCountAll(query);
+        const count = await Expense.countDocuments(query.where);
 
-        if (res.headersSent === false) {
+        if (!res.headersSent) {
             res.json({
                 draw: draw,
                 recordsTotal: count, // Total records in the dataset
                 recordsFiltered: count, // Total records after filtering (if applicable)
-                data: expenses,
+                data: expenses
             });
         }
     } catch (error) {
+        console.log(error);
         next(error);
     }
 }
 
 const updateExpense = async (req, res, next) => {
-    const transaction = await sequelize.transaction();
-
+    const session = await Expense.startSession();
+    session.startTransaction();
     try {
         const expenseDetails = await joiExpense.updateExpenseSchema.validateAsync(req.body);
 
-        const expense = await req.user.getExpenses({
-            where: {
-                id: expenseDetails.expenseId,
-            }
+        const expense = await Expense.findOne({
+            _id: expenseDetails.expenseId,
+            isDeleted: false
         })
 
-        if (expense?.length <= 0) {
+        if (!expense) {
             throw httpErrors.NotFound(`Expense with id: ${expenseDetails.expenseId} not exist.`);
         }
 
-        await Expense.update(
+        await expense.updateOne(
+            expenseDetails,
             {
-                id: expenseDetails.expenseId,
-                amount: expenseDetails.amount,
-                description: expenseDetails.description,
-                category: expenseDetails.category
-            },
-            {
-                where: {
-                    id: expenseDetails.expenseId
-                },
-                transaction
+                new: true
             },
         )
 
-        const totalExpense = req.user.totalExpense - expense[0].amount + expenseDetails.amount;
+        // const totalExpense = req.user.totalExpense - expense[0].amount + expenseDetails.amount;
 
-        await req.user.update({ totalExpense: totalExpense }, { transaction });
+        req.user.totalExpense = req.user.totalExpense - expense.amount + expenseDetails.amount;
 
-        await transaction.commit();
+        await req.user.save({ session });
+
+        // await req.user.update({ totalExpense: totalExpense }, { transaction });
+
+        await session.commitTransaction();
+
+        session.endSession();
 
         if (res.headersSent === false) {
             res.status(200).send({
@@ -169,43 +225,37 @@ const updateExpense = async (req, res, next) => {
             });
         }
     } catch (error) {
-        await transaction.rollback();
+        await session.abortTransaction();
+        session.endSession();
         if (error?.isJoi === true) error.status = 422;
         next(error);
     }
 }
 
 const deleteExpense = async (req, res, next) => {
-    const transaction = await sequelize.transaction();
-
     try {
         const expenseDetails = await joiExpense.deleteExpenseSchema.validateAsync(req.body);
 
-        const expense = await req.user.getExpenses({
-            where: {
-                id: expenseDetails.expenseId,
-            }
+        const expense = await Expense.findOne({
+            _id: expenseDetails.expenseId,
+            isDeleted: false
         })
 
-        if (expense?.length <= 0) {
+        if (!expense) {
             throw httpErrors.NotFound(`Expense with id: ${expenseDetails.expenseId} not exist.`);
         }
 
-        await Expense.destroy(
-            {
-                where: {
-                    id: expenseDetails.expenseId
-                },
-                transaction
-            }
-        )
+        expense.isDeleted = true;
 
-        const totalExpense = req.user.totalExpense - expense[0].amount;
+        await expense.save();
 
-        await req.user.update({ totalExpense: totalExpense }, { transaction });
+        // const totalExpense = req.user.totalExpense - expense[0].amount;
 
-        await transaction.commit();
+        // await req.user.update({ totalExpense: totalExpense }, { transaction });
 
+        req.user.totalExpense = req.user.totalExpense - expense.amount;
+
+        await req.user.save();
 
         if (res.headersSent === false) {
             res.status(200).send({
@@ -217,7 +267,6 @@ const deleteExpense = async (req, res, next) => {
         }
 
     } catch (error) {
-        await transaction.rollback();
         if (error?.isJoi === true) error.status = 422;
         next(error);
     }

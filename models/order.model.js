@@ -1,23 +1,30 @@
-const sequelize = require("../helper/common/init_mysql")
+const mongoose = require("mongoose");
 
-const DataTypes = require("sequelize");
-
-const Order = sequelize.define('Order', {
-    // Model attributes are defined here
+const orderSchema = new mongoose.Schema({
     razorpayOrderId: {
-        type: DataTypes.STRING,
-        allowNull: false,
+        type: String,
+        required: true
     },
     paymentId: {
-        type: DataTypes.STRING,
-        allowNull: true, // This makes paymentId optional
+        type: String,
     },
     status: {
-        type: DataTypes.STRING,
-        allowNull: false,
+        type: String,
+        required: true
     },
-}, {
-    timestamps: true
-});
+    user: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'user',
+        required: true
+    },
+    isDeleted: {
+        type: Boolean,
+        default: false
+    }
+},
+    {
+        timestamps: true
+    }
+)
 
-module.exports = Order;
+module.exports = mongoose.model('order', orderSchema);

@@ -48,9 +48,8 @@ const verifyAccessToken = async (req, res, next) => {
             throw notAuthorized;
         }
         const userDetails = await User.findOne({
-            where: {
-                id: payloadData.userId
-            }
+            _id: payloadData.userId,
+            isDeleted: false
         })
 
         req.user = userDetails;

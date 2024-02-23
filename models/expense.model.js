@@ -1,22 +1,30 @@
-const sequelize = require("../helper/common/init_mysql")
+const mongoose = require("mongoose");
 
-const DataTypes = require("sequelize");
-
-const Expense = sequelize.define('Expense', {
-    // Model attributes are defined here
+const expenseSchema = new mongoose.Schema({
     amount: {
-        type: DataTypes.BIGINT,
-        allowNull: false
+        type: Number,
+        required: true
     },
     description: {
-        type: DataTypes.STRING,
+        type: String,
     },
     category: {
-        type: DataTypes.STRING,
-        allowNull: false
+        type: String,
+        required: true
     },
-}, {
-    timestamps: true
-});
+    user: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'user',
+        required: true
+    },
+    isDeleted: {
+        type: Boolean,
+        default: false
+    }
+},
+    {
+        timestamps: true
+    }
+)
 
-module.exports = Expense;
+module.exports = mongoose.model('expense', expenseSchema);

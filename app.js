@@ -8,22 +8,15 @@ const expesneRoutes = require("./routes/expense.route");
 const authRoutes = require("./routes/user.route");
 const orderRoutes = require("./routes/order.route");
 const premiumRoutes = require("./routes/premium.route");
-
-const User = require('./models/user.model');
-const Expense = require('./models/expense.model');
-const Order = require('./models/order.model');
-const ForgotPasswordRequests = require('./models/forgetPasswordRequests.model');
 const expenseTrackerBackendApp = express();
 
 expenseTrackerBackendApp.use(cors());
 
-const sequelize = require('./helper/common/init_mysql');
+require("./helper/common/init_mongodb");
 
 
 expenseTrackerBackendApp.use(express.json());
 expenseTrackerBackendApp.use(express.urlencoded({ extended: true }));
-
-
 
 expenseTrackerBackendApp.use("/api/expense", expesneRoutes);
 expenseTrackerBackendApp.use("/api/auth", authRoutes);
@@ -53,26 +46,12 @@ expenseTrackerBackendApp.use((error, req, res, next) => {
     next();
 });
 
-//models associtaions.
-User.hasMany(Expense, { foreignKey: 'userId' });
-Expense.belongsTo(User, { foreignKey: 'userId' });
-User.hasMany(Order, { foreignKey: 'userId' });
-Order.belongsTo(User, { foreignKey: 'userId' });
-User.hasMany(ForgotPasswordRequests, { foreignKey: 'userId' });
-ForgotPasswordRequests.belongsTo(User, { foreignKey: 'userId' });
 
 const port = process.env.APP_PORT;
 
-sequelize.sync({ alter: true })
-    .then(() => {
-        expenseTrackerBackendApp.listen(port, () => {
-            console.log(`server is listening on the port of ${port}`);
-        })
-    })
-    .catch(error => {
-        console.log(error);
-        process.exit(0);
-    })
+expenseTrackerBackendApp.listen(port, () => {
+    console.log(`server is listening on the port of ${port}`);
+})
 
 process.on('SIGINT', () => {
     // Perform cleanup operations here
